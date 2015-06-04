@@ -1,0 +1,8 @@
+prefix=/home/chengque/catkin_ws/devel
+
+Name: mavros
+Description: Description of mavros
+Version: 0.11.2
+Cflags: -I/home/chengque/catkin_ws/devel/include -I/home/chengque/catkin_ws/src/mavros_pkg/mavros/include -I/usr/include -I/opt/ros/jade/include
+Libs: -L/home/chengque/catkin_ws/devel/lib -lmavros -l:/usr/lib/i386-linux-gnu/libboost_system.so
+Requires: diagnostic_msgs diagnostic_updater pluginlib roscpp sensor_msgs std_msgs tf geometry_msgs libmavconn

@@ -1,0 +1,115 @@
+#!/usr/bin/env python
+import rospy
+from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import Float64
+from sensor_msgs.msg import Imu
+from sensor_msgs.msg import Temperature
+from sensor_msgs.msg import Temperature
+from sensor_msgs.msg import NavSatFix
+from geometry_msgs.msg import PoseStamped
+from mavros.msg import RCIn
+from mavros.msg import RCOut
+from mavros.msg import Control_Refs
+from PyQt4 import QtCore, QtGui
+from PyQt4.QtCore import *; 
+from PyQt4.QtGui import *;
+import sys
+
+
+
+class MyWindow(QtGui.QWidget):
+    def __init__(self):
+        QtGui.QWidget.__init__(self)
+        self.setWindowTitle('qmavstatus')       
+        self.resize(600,200)        
+        self.gridlayout = QtGui.QGridLayout() 
+
+        self.row=0;
+
+        rospy.init_node('qtmav', anonymous=True)
+        self.lTemperature=QtGui.QLabel(str(self.row))
+        self.StartThread('/mavros/imu/temperature',Temperature,"temperature(PyQt_PyObject)",self.ShowTemperature,"Temperature",self.lTemperature)
+        self.lLocalPosition=QtGui.QLabel(str(self.row))
+        self.StartThread('/mavros/local_position/local',PoseStamped,"height(PyQt_PyObject)",self.ShowLocalPosition,'Local Position',self.lLocalPosition)
+        self.lGlobalPosition=QtGui.QLabel(str(self.row))
+        self.StartThread('/mavros/global_position/global',NavSatFix,"global_position(PyQt_PyObject)",self.ShowGlobalPosition,'Global Position',self.lGlobalPosition)
+        self.lAttitude=QtGui.QLabel(str(self.row))
+        self.StartThread('/mavros/imu/data',Imu,"att(PyQt_PyObject)",self.ShowAttitude,'Attitude',self.lAttitude)
+        self.lAcceleration=QtGui.QLabel(str(self.row))
+        self.StartThread('/mavros/imu/data',Imu,"acc(PyQt_PyObject)",self.ShowAcceleration,'Acceleration',self.lAcceleration)
+        self.lRCIn=QtGui.QLabel(str(self.row))
+        self.StartThread('/mavros/rc/in',RCIn,"rcin(PyQt_PyObject)",self.ShowRCIn,'Remote',self.lRCIn)
+        self.lRCOut=QtGui.QLabel(str(self.row))
+        self.StartThread('/mavros/rc/out',RCOut,"rcout(PyQt_PyObject)",self.ShowRCOut,'Servo Out',self.lRCOut)
+        self.lControlRefs=QtGui.QLabel(str(self.row))
+        self.StartThread('/mavros/controlrefs/ControlRefs',Control_Refs,"rcout(PyQt_PyObject)",self.ShowControlRefs,'Control References',self.lControlRefs)
+        
+        attpub=rospy.Publisher('/mavros/setpoint_attitude', PoseStamped, queue_size=10)
+        thrpub=rospy.Publisher('/mavros/setpoint_attitude/att_throttle', Float64, queue_size=10)
+        
+        msg = PoseStamped()
+
+        attpub.publish(msg)
+
+        self.setLayout(self.gridlayout)
+
+    def StartThread(self,topic,message,signal,callback,note,label):
+              #Height
+        labelInfo = QtGui.QLabel( "labelInfo" )
+        labelInfo.setText( note )
+        self.gridlayout.addWidget(labelInfo, self.row,0,1,1)
+        #Data
+        label.setText( "0" )
+        self.gridlayout.addWidget(label, self.row,1,1,1)
+        self.row=self.row+1
+        tempthread = WorkThread(topic,message,signal)
+        self.connect(tempthread, QtCore.SIGNAL(signal), callback)
+        tempthread.start()
+    def ShowTemperature(self,topic):
+        self.lTemperature.setText('%.3f'%topic.temperature)
+
+    def ShowLocalPosition(self,topic):
+        self.lLocalPosition.setText('x: %.3f  y: %.3f  z: %.3f'%(topic.pose.position.x,topic.pose.position.y,topic.pose.position.z))
+
+    def ShowGlobalPosition(self,topic):
+        self.lGlobalPosition.setText('lat: %.6f  lon: %.6f  alt: %.6f'%(topic.latitude,topic.longitude,topic.altitude))
+
+    def ShowAttitude(self,topic):
+        self.lAttitude.setText('theta: %.3f  phi: %.3f  psi: %.3f'%(topic.orientation.y,topic.orientation.x,topic.orientation.z))
+
+    def ShowAcceleration(self,topic):
+        self.lAcceleration.setText('x: %.3f  y: %.3f  z: %.3f'%(topic.linear_acceleration.x,topic.linear_acceleration.y,topic.linear_acceleration.z))
+
+    def ShowRCIn(self,topic):
+        self.lRCIn.setText('1: %.3f  2: %.3f  3: %.3f'%(topic.rssi,topic.rssi,topic.rssi))#(topic.channels[0],topic.channels[0],topic.channels[0]))
+
+    def ShowRCOut(self,topic):
+        self.lRCOut.setText('1: %.3f  2: %.3f  3: %.3f'%(topic.channels[0],topic.channels[0],topic.channels[0]))
+
+    def ShowControlRefs(self,topic):
+        self.lControlRefs.setText('theta: %.3f  phi: %.3f  psi: %.3f  thrust: %.3f'%(topic.theta,topic.phi,topic.psi,topic.thrust))    
+
+class WorkThread(QtCore.QThread):
+    def __init__(self,topic,message,signal):
+        QtCore.QThread.__init__(self)
+        self.topic=topic
+        self.message=message
+        self.signal=signal
+
+    def __del__(self):
+        self.wait()
+    def callback(self,data):
+        self.emit( QtCore.SIGNAL(self.signal), data)
+
+    def run(self):
+        print self.topic
+        rospy.Subscriber(self.topic, self.message ,self.callback)
+#        rospy.spin()
+
+
+ 
+if __name__ == '__main__':
+    app = QtGui.QApplication(sys.argv)
+    mywindow = MyWindow() 
+    mywindow.show()
+    app.exec_()

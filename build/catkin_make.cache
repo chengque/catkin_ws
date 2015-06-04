@@ -1,0 +1,2 @@
+mavros_pkg/libmavconn:mavros_pkg/mavros:mavros_pkg/mavros_extras
+-DCATKIN_DEVEL_PREFIX=/home/chengque/catkin_ws/devel -DCMAKE_INSTALL_PREFIX=/opt/ros/jade -G Unix Makefiles
